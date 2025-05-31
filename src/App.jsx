@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+} from "firebase/firestore";
 import { db } from "./firebase";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 
@@ -23,28 +31,51 @@ const Dictionary = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const matches = input.match(/\(([^)]+)\)/g);
-  
+
     if (!matches) {
       alert("Format input salah. Gunakan format (kata=arti)(kata=arti)...");
       return;
     }
-  
+
+    const existingSnapshot = await getDocs(collection(db, "dictionaryWords"));
+    const existingWords = new Set();
+    existingSnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.english) {
+        existingWords.add(data.english.trim().toLowerCase());
+      }
+    });
+
     const newWords = matches
       .map((entry) => {
         const cleanEntry = entry.slice(1, -1);
         const [english, meaning] = cleanEntry.split("=");
         if (english && meaning) {
-          return { english: english.trim(), meaning: meaning.trim(), createdAt: new Date() };
+          const trimmedEnglish = english.trim().toLowerCase();
+          if (!existingWords.has(trimmedEnglish)) {
+            existingWords.add(trimmedEnglish);
+            return {
+              english: english.trim(),
+              meaning: meaning.trim(),
+              createdAt: new Date(),
+            };
+          }
         }
         return null;
       })
       .filter(Boolean);
-  
+
+    if (newWords.length === 0) {
+      alert("Semua kata sudah ada di database.");
+      return;
+    }
+
     for (const word of newWords) {
       await addDoc(collection(db, "dictionaryWords"), word);
     }
-  
+
     setInput("");
     fetchWords();
   };
@@ -55,12 +86,17 @@ const Dictionary = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-100 p-6 font-sans">
-      <div className="mt-5 container mx-auto bg-white rounded-3xl shadow-xl p-8 transition duration-300">
-        <h1 className="text-3xl font-bold text-indigo-600 mb-6 text-center">📘 Kamus Bahasa Inggris</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-100 p-6 font-sans text-xs md:text-sm">
+      <div className="mt-3 container mx-auto bg-white rounded-3xl shadow-xl p-4 transition duration-300">
+        <h1 className="text-xl md:text-3xl font-bold text-indigo-600 mb-6 text-center">
+          📘 Kamus Bahasa Inggris
+        </h1>
 
         <div className="mb-6 text-center">
-          <Link to="/preview" className="text-indigo-600 hover:underline font-semibold">
+          <Link
+            to="/preview"
+            className="text-indigo-600 hover:underline font-semibold text-xs md:text-sm"
+          >
             Lihat Preview Kamus
           </Link>
         </div>
@@ -68,14 +104,14 @@ const Dictionary = () => {
         <form onSubmit={handleSubmit} className="mb-6">
           <input
             type="text"
-            className="w-full border border-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none rounded-lg p-3 text-lg transition"
+            className="w-full border border-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none rounded-lg p-3 text-xs md:text-base transition"
             placeholder="Masukkan kata seperti: (fun=menyenangkan)(girl=perempuan)"
             value={input}
             onChange={(e) => setInput(e.target.value)}
           />
           <button
             type="submit"
-            className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+            className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-lg font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
           >
             <span className="text-white text-xl">➕</span> Tambah Kata
           </button>
@@ -85,7 +121,7 @@ const Dictionary = () => {
           {words.map((word) => (
             <li
               key={word.id}
-              className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 hover:bg-indigo-100 transition flex justify-between items-start"
+              className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 hover:bg-indigo-100 transition flex justify-between items-start text-xs md:text-sm"
             >
               <div>
                 <span className="text-indigo-700 font-semibold">{word.english}</span>
@@ -126,17 +162,22 @@ const Preview = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-100 p-6 font-sans">
-      <div className="mt-5 container mx-auto bg-white rounded-3xl shadow-xl p-8 transition duration-300">
-        <h1 className="text-3xl font-bold text-indigo-600 mb-6 text-center">📖 Preview Kamus</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-100 p-6 font-sans text-xs md:text-sm">
+      <div className="mt-3 container mx-auto bg-white rounded-3xl shadow-xl p-4 transition duration-300">
+        <h1 className="text-xl md:text-3xl font-bold text-indigo-600 mb-6 text-center">
+          📖 Preview Kamus
+        </h1>
 
         <div className="mb-6 text-center">
-          <Link to="/" className="text-indigo-600 hover:underline font-semibold">
+          <Link
+            to="/"
+            className="text-indigo-600 hover:underline font-semibold text-xs md:text-sm"
+          >
             Kembali ke Halaman Utama
           </Link>
         </div>
 
-        <div className="mb-4 text-indigo-700 font-semibold text-center">
+        <div className="mb-4 text-indigo-700 font-semibold text-center text-xs md:text-sm">
           Total kata: {words.length}
         </div>
 
@@ -144,7 +185,7 @@ const Preview = () => {
           {words.map((word) => (
             <li
               key={word.id}
-              className="bg-indigo-50 border border-indigo-200 rounded-lg p-3"
+              className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-xs md:text-sm"
             >
               <div>
                 <span className="text-indigo-700 font-semibold">{word.english}</span>
